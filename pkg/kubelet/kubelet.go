@@ -406,7 +406,6 @@ func PreInitRuntimeService(kubeCfg *kubeletconfiginternal.KubeletConfiguration, 
 	}
 
 	kubeDeps.useLegacyCadvisorStats = cadvisor.UsingLegacyCadvisorStats(kubeCfg.ContainerRuntimeEndpoint)
-
 	return nil
 }
 
@@ -817,18 +816,16 @@ func NewMainKubelet(ctx context.Context,
 	hostStatsProvider := stats.NewHostStatsProvider(kubecontainer.RealOS{}, func(podUID types.UID) string {
 		return getEtcHostsPath(klet.getPodDir(podUID))
 	}, podLogsDirectory)
-
-	cadvisorStatsProvider := stats.NewCadvisorStatsProvider(
-		klet.cadvisor,
-		klet.resourceAnalyzer,
-		klet.podManager,
-		klet.containerRuntime,
-		klet.statusManager,
-		hostStatsProvider,
-		kubeDeps.ContainerManager,
-	)
+	klog.InfoS("stats provider: ", "useLegacyCadvisorStats", kubeDeps.useLegacyCadvisorStats)
 	if kubeDeps.useLegacyCadvisorStats {
-		klet.StatsProvider = cadvisorStatsProvider
+		klet.StatsProvider = stats.NewCadvisorStatsProvider(
+			klet.cadvisor,
+			klet.resourceAnalyzer,
+			klet.podManager,
+			klet.runtimeCache,
+			klet.containerRuntime,
+			klet.statusManager,
+			hostStatsProvider)
 	} else {
 		klet.StatsProvider = stats.NewCRIStatsProvider(
 			klet.cadvisor,
