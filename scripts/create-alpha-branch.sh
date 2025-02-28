@@ -4,6 +4,8 @@ set -e
 
 NEW_RELEASE_BRANCHES=()
 
+git remote set-url upstream https://github.com/kubernetes/kubernetes.git
+
 # Define temporary files
 rancher_tags_file=$(mktemp -p /tmp)
 
@@ -35,29 +37,31 @@ for tag in $NEW_TAGS; do
     echo "[INFO] Processing version: ${tag}"
     
     # Check if the branch already exist
-    if git show-ref --verify --quiet refs/remotes/origin/release-${tag}; then
-        echo "[WARN] Branch release-${tag} already exist. Skipping the version ${tag}."
+    if git show-ref --verify --quiet refs/remotes/origin/${tag}; then
+        echo "[WARN] Branch ${tag} already exist. Skipping the version ${tag}."
         continue
     fi
     
-    if ! $(git checkout -qb "release-${tag}" $tag); then
-        git checkout -b "release-${tag}" $tag
-        echo "[WARN] Could not checkout a local branch release-${tag} from the upstream tag ${tag}."
+    if ! $(git checkout -qb "${tag}" $tag); then
+        git checkout -b "${tag}" $tag
+        echo "[WARN] Could not checkout a local branch ${tag} from the upstream tag ${tag}."
         continue
     fi
-    echo "[INFO] Checkout to a local branch release-${tag} from the upstream tag ${tag}."
-
+    echo "[INFO] Checkout to a local branch ${tag} from the upstream tag ${tag}."
 
     # Extract major and minor version from the tag
     major_minor=$(echo "${tag}" | cut -d '.' -f 1,2)
 
     # Try to find the latest tag with the same major and minor version
-    last_latest_tag=$(grep "${major_minor}" "$rancher_tags_file" | head -1)
+    last_latest_tag="v1.32.2"
+    echo $last_latest_tag
 
     # If not found, look for the previous minor version
     if [ -z "$last_latest_tag" ]; then
         major_minor=$(echo "${major_minor}" | awk -F. '{print $1 "." $2-1}')
+        echo $major_minor
         last_latest_tag=$(grep "${major_minor}" "$rancher_tags_file" | head -1)
+        echo $last_latest_tag
     fi
     echo "[INFO] Latest kubernetes version in rancher/kubernetes prior ${tag}: ${last_latest_tag}"
 
@@ -82,21 +86,21 @@ for tag in $NEW_TAGS; do
             echo "[INFO] This is a vendor commit, not cherry picking."
             echo "[INFO] Performing './hack/update-vendor.sh'"
             if ! ./hack/update-vendor.sh > /dev/null; then
-                echo "[WARN] Failed during vendor update in branch release-${tag}. Skipping the version ${tag}."
+                echo "[WARN] Failed during vendor update in branch ${tag}. Skipping the version ${tag}."
                 FAIL=1
                 break
             fi
             echo "[INFO] Commit vendor update changes"
             git add .
             if ! $(git commit -m "vendor update" > /dev/null); then
-                echo "[WARN] Failed in commiting vendor changes in branch release-${tag}. Skipping the version ${tag}."
+                echo "[WARN] Failed in commiting vendor changes in branch ${tag}. Skipping the version ${tag}."
                 FAIL=1
                 break
             fi
         else
-            echo "[INFO] Cherry pick commit: $commit to branch: release-${tag}"
+            echo "[INFO] Cherry pick commit: $commit to branch: ${tag}"
             if ! git cherry-pick "$commit" > /dev/null; then
-                echo "[WARN] Failed during cherry-pick of commit $commit in branch release-${tag}. Skipping the version ${tag}."
+                echo "[WARN] Failed during cherry-pick of commit $commit in branch ${tag}. Skipping the version ${tag}."
                 FAIL=1
                 break
             fi
@@ -104,14 +108,7 @@ for tag in $NEW_TAGS; do
     done
 
     if [[ $FAIL == 0 ]]; then
-        echo "[INFO] Cherry pick completed successfully. Pushing branch release-${tag} to rancher repository."
-        if ! $(git push --quiet --no-progress origin release-${tag} > /dev/null); then
-            echo "[WARN] Failed while pushing the branch release-${tag} to rancher repository. Skipping the version ${tag}."
-            continue
-        else
-            NEW_RELEASE_BRANCHES+=( "release-${tag}" )
-            echo "[INFO] Successfully pushed branch release-${tag}: https://github.com/rancher/kubernetes/tree/release-${tag}"
-        fi
+        echo "[INFO] Cherry pick completed successfully."
     else
         git cherry-pick --abort
     fi

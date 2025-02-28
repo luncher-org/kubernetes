@@ -7,32 +7,19 @@ on:
 
 jobs:
   create-branches:
-    runs-on: runs-on,runner=4cpu-linux-x64,run-id=${{ github.run_id }}
+    runs-on: ubuntu-latest
     permissions:
       id-token: write
       contents: write
     outputs:
       new-release-branches: ${{ steps.create-release-branches.outputs.NEW_RELEASE_BRANCHES }}
     steps:
-      - name: Read App Secrets
-        uses: rancher-eio/read-vault-secrets@main
-        with:
-          secrets: |
-            secret/data/github/repo/${{ github.repository }}/github/app-credentials appId | APP_ID ;
-            secret/data/github/repo/${{ github.repository }}/github/app-credentials privateKey | PRIVATE_KEY
-      - name: Create App Token
-        uses: actions/create-github-app-token@v1
-        id: app-token
-        with:
-          app-id: ${{ env.APP_ID }}
-          private-key: ${{ env.PRIVATE_KEY }}
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           path: 'rancher-k8s'
           fetch-depth: 0
           fetch-tags: true
-          token: ${{ steps.app-token.outputs.token }}
   
       - name: Configure git user
         run: |
@@ -43,12 +30,12 @@ jobs:
       - name: Fetch the new tags from kubernetes/kubernetes repository
         run: $GITHUB_WORKSPACE/rancher-k8s/scripts/check-for-new-tag.sh
 
-      - name: Create new release branches in rancher/kubernetes
-        id: create-release-branches
+      - name: Create new alpha branches in rancher/kubernetes
+        id: create-new-branches
         if: ${{ env.NEW_TAGS != '' }}  # Run only if there are new tags
         run: |
           cd rancher-k8s
-          $GITHUB_WORKSPACE/rancher-k8s/scripts/create-release-branch.sh
+          $GITHUB_WORKSPACE/rancher-k8s/scripts/create-alpha-branch.sh
 
       # - name: 'Tar files'
       #   run: |
@@ -62,7 +49,7 @@ jobs:
 
   build-and-validate:
     needs: create-branches
-    runs-on: runs-on,runner=4cpu-linux-x64,run-id=${{ github.run_id }}
+    runs-on: ubuntu-latest
     if: ${{ needs.create-branches.outputs.new-release-branches != '[]' && needs.create-branches.outputs.new-release-branches != '' }}
     container:
       image: rancher/dapper:v0.6.0
@@ -81,24 +68,10 @@ jobs:
           git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git config --global user.name "github-actions[bot]"
 
-      - name: Read App Secrets
-        uses: rancher-eio/read-vault-secrets@main
-        with:
-          secrets: |
-            secret/data/github/repo/${{ github.repository }}/github/app-credentials appId | APP_ID ;
-            secret/data/github/repo/${{ github.repository }}/github/app-credentials privateKey | PRIVATE_KEY
-      - name: Create App Token
-        uses: actions/create-github-app-token@v1
-        id: app-token
-        with:
-          app-id: ${{ env.APP_ID }}
-          private-key: ${{ env.PRIVATE_KEY }}
-
       - name: Checkout repository with branch ${{ matrix.branches }}
         uses: actions/checkout@v4
         with:
           ref: ${{ matrix.branches }}
-          token: ${{ steps.app-token.outputs.token }}
 
       # - name: Download git repo from artifact
       #   uses: actions/download-artifact@v4
@@ -132,11 +105,11 @@ jobs:
           fi
 
           # Push the tag to origin
-          if ! git push origin "$TAG"; then
-              echo "[WARN] Failed while pushing the tag $TAG to the repository."
-              exit 1
-          else
-              echo "[INFO] Successfully pushed tag $TAG: https://github.com/rancher/kubernetes/releases/tag/$TAG"
-          fi
+          # if ! git push origin "$TAG"; then
+          #     echo "[WARN] Failed while pushing the tag $TAG to the repository."
+          #     exit 1
+          # else
+          #     echo "[INFO] Successfully pushed tag $TAG: https://github.com/rancher/kubernetes/releases/tag/$TAG"
+          # fi
         env:
           RELEASE_BRANCH: ${{ matrix.branches }}

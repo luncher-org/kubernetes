@@ -25,7 +25,7 @@ fi
 # Process each tag
 while read -r tag; do
     # Skip tags with "rc", "alpha", or "beta"
-    if [[ "$tag" == *"rc"* || "$tag" == *"alpha"* || "$tag" == *"beta"* ]]; then
+    if [[ "$tag" == *"rc"* ]]; then
         continue
     fi
 
