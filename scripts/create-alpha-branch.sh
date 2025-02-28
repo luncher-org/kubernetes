@@ -4,6 +4,11 @@ set -e
 
 NEW_RELEASE_BRANCHES=()
 
+echo "[INFO] Setting up git kubernetes/kubenetes upstream in rancher/kubernetes git repository."
+# Add upstream remote if not already added
+if ! git remote get-url upstream &>/dev/null; then
+    git remote add "upstream" https://github.com/kubernetes/kubernetes.git
+fi
 git remote set-url upstream https://github.com/kubernetes/kubernetes.git
 
 # Define temporary files
@@ -20,12 +25,6 @@ if [ ! -s "$rancher_tags_file" ]; then
     echo "[ERROR] No tags found in rancher/kubernetes."
     rm -f "$rancher_tags_file"
     exit 1
-fi
-
-echo "[INFO] Setting up git kubernetes/kubenetes upstream in rancher/kubernetes git repository."
-# Add upstream remote if not already added
-if ! git remote get-url upstream &>/dev/null; then
-    git remote add "upstream" https://github.com/kubernetes/kubernetes.git
 fi
 
 # Fetch upstream tags
