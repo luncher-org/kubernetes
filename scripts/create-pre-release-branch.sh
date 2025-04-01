@@ -36,23 +36,24 @@ for tag in $NEW_TAGS; do
     echo "[INFO] Processing version: ${tag}"
     
     # Check if the branch already exist
-    if git show-ref --verify --quiet refs/remotes/origin/release-${tag}; then
-        echo "[WARN] Branch release-${tag} already exist. Skipping the version ${tag}."
+    if git show-ref --verify --quiet refs/remotes/origin/${tag}; then
+        echo "[WARN] Branch ${tag} already exist. Skipping the version ${tag}."
         continue
     fi
     
-    if ! $(git checkout -qb "release-${tag}" $tag); then
-        git checkout -b "release-${tag}" $tag
+    if ! $(git checkout -qb "${tag}" $tag); then
+        git checkout -b "${tag}" $tag
         echo "[WARN] Could not checkout a local branch ${tag} from the upstream tag ${tag}."
         continue
     fi
-    echo "[INFO] Checkout to a local branch release-${tag} from the upstream tag ${tag}."
+    echo "[INFO] Checkout to a local branch ${tag} from the upstream tag ${tag}."
 
     # Extract major and minor version from the tag
     major_minor=$(echo "${tag}" | cut -d '.' -f 1,2)
 
     # Try to find the latest tag with the same major and minor version
-    last_latest_tag="v1.32.3"
+    # change this line!
+    last_latest_tag="v1.32.2"
     echo $last_latest_tag
 
     # If not found, look for the previous minor version
