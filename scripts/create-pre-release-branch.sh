@@ -53,7 +53,7 @@ for tag in $NEW_TAGS; do
 
     # Try to find the latest tag with the same major and minor version
     # change this line!
-    last_latest_tag="v1.32.2"
+    last_latest_tag="v1.33.1"
     echo $last_latest_tag
 
     # If not found, look for the previous minor version

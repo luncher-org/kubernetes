@@ -52,7 +52,7 @@ for tag in $NEW_TAGS; do
     major_minor=$(echo "${tag}" | cut -d '.' -f 1,2)
 
     # Try to find the latest tag with the same major and minor version
-    last_latest_tag=$(grep "${major_minor}" "$rancher_tags_file" | head -1)
+    last_latest_tag=$(grep "${major_minor}" "$rancher_tags_file" | grep -E -v '\-(alpha|beta|rc)\.[0-9]+' | head -1)
 
     # If not found, look for the previous minor version
     if [ -z "$last_latest_tag" ]; then
